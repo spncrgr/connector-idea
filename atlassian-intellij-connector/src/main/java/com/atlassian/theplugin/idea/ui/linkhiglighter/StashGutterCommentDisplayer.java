@@ -1,6 +1,8 @@
 package com.atlassian.theplugin.idea.ui.linkhiglighter;
 
 import com.atlassian.connector.intellij.stash.*;
+import com.atlassian.connector.intellij.stash.beans.AnchorBean;
+import com.atlassian.connector.intellij.stash.beans.CommentBean;
 import com.atlassian.connector.intellij.stash.impl.StashServerFacadeImpl;
 import com.atlassian.theplugin.idea.jira.IssueCommentDialog;
 import com.google.common.base.Function;
@@ -17,11 +19,13 @@ import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.awt.*;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -45,12 +49,12 @@ public class StashGutterCommentDisplayer {
         this.psiFile = psiFile;
         this.editor = editor;
 
-        registerTextAnnotationProvider(psiFile, editor);
+        reparseAll();
     }
 
     private void registerTextAnnotationProvider(final PsiFile psiFile, Editor editor) {
         //final StashServerFacade stashFacade = StashArrayListBackedServerFacade.getInstance();
-        final StashServerFacade stashFacade = new StashServerFacadeImpl();
+        final StashServerFacade stashFacade = StashServerFacadeImpl.getInstance();
 
         final List<Comment> comments;
         try {
@@ -106,9 +110,8 @@ public class StashGutterCommentDisplayer {
                                 Task.Backgroundable task = new Task.Backgroundable(project, "Adding comment to Stash", false) {
 
                                     public void run(@NotNull ProgressIndicator progressIndicator) {
-                                        Comment comment = new SimpleComment();
                                         try {
-                                            stashFacade.addComment(new SimpleComment(issueCommentDialog.getComment(), "zbysiu", getRelativePath(psiFile), i + 1));
+                                            stashFacade.addComment(new CommentBean(issueCommentDialog.getComment(), new AnchorBean(i + 1, getRelativePath(psiFile))));
                                             reparseAll();
                                         } catch (URISyntaxException e) {
                                             e.printStackTrace();
@@ -137,6 +140,7 @@ public class StashGutterCommentDisplayer {
     }
 
     public void reparseAll() {
+
 
         ApplicationManager.getApplication().runReadAction(new Runnable() {
             public void run() {

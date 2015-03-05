@@ -12,6 +12,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.AuthCache;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.protocol.HttpClientContext;
@@ -64,21 +65,30 @@ public class StashRestSession implements StashSession {
     public String getPullRequests(String projectKey, String repo) throws IOException {
         String url = String.format("/rest/api/1.0/projects/%s/repos/%s/pull-requests", projectKey, repo);
 
-        HttpResponse response = client.execute(new HttpGet(baseUrl + url), context);
+        return executeGet(url);
 
-        int statusCode = response.getStatusLine().getStatusCode();
 
-        return IOUtils.toString(response.getEntity().getContent());
+    }
+
+    private String executeGet(String url) throws IOException {
+        CloseableHttpResponse response = null;
+
+        try {
+            response = (CloseableHttpResponse) client.execute(new HttpGet(baseUrl + url), context);
+
+            int statusCode = response.getStatusLine().getStatusCode();
+            return IOUtils.toString(response.getEntity().getContent());
+        } finally {
+            if (response != null) {
+                response.close();
+            }
+        }
     }
 
     public String getComments(String projectKey, String repo, String pullRequestId, String path) throws IOException {
         String url = String.format("/rest/api/1.0/projects/%s/repos/%s/pull-requests/%s/comments?path=%s", projectKey, repo, pullRequestId, path);
 
-        HttpResponse response = client.execute(new HttpGet(baseUrl + url), context);
-
-        int statusCode = response.getStatusLine().getStatusCode();
-
-        return IOUtils.toString(response.getEntity().getContent());
+        return executeGet(url);
     }
 
     public void postComment(String projectKey, String repo, String pullRequestId, Comment comment) throws IOException {
@@ -89,10 +99,17 @@ public class StashRestSession implements StashSession {
         StringEntity entity = new StringEntity(gson.toJson(comment));
         post.setEntity(entity);
         post.setHeader("Content-type", "application/json");
+        CloseableHttpResponse response = null;
 
-        HttpResponse response = client.execute(post, context);
+        try {
+            response = (CloseableHttpResponse) client.execute(post, context);
 
-        int statusCode = response.getStatusLine().getStatusCode();
+            int statusCode = response.getStatusLine().getStatusCode();
+        } finally {
+            if (response != null) {
+                response.close();
+            }
+        }
 
 
         //return IOUtils.toString(response.getEntity().getContent());

@@ -35,19 +35,28 @@ public class StashServerFacadeImpl implements StashServerFacade
 
     private Optional<PullRequest> currentPullRequest = Optional.absent();
 
-    private final StashSession stashSession = new StashRestSession();
+    private final StashSession stashRestSession = new StashRestSession();
+    private static StashServerFacadeImpl instance;
 
-    public StashServerFacadeImpl() {
+    static {
+        instance = new StashServerFacadeImpl();
+    }
+
+    private StashServerFacadeImpl() {
         try {
-            stashSession.login("blewandowski", "blewandowski".toCharArray());
+            stashRestSession.login("blewandowski", "blewandowski".toCharArray());
         } catch (RemoteApiLoginException e) {
             e.printStackTrace();
         }
     }
 
+    public static StashServerFacade getInstance() {
+        return instance;
+    }
+
     public List<PullRequest> getPullRequests() {
         try {
-            String pullRequests = stashSession.getPullRequests(PROJECT_KEY, REPO);
+            String pullRequests = stashRestSession.getPullRequests(PROJECT_KEY, REPO);
             return Lists.transform(getValues(pullRequests), new Function<String, PullRequest>() {
                 public PullRequest apply(String s) {
                     return gson.fromJson(s, PullRequestBean.class);
@@ -62,7 +71,7 @@ public class StashServerFacadeImpl implements StashServerFacade
 
         if (currentPullRequest.isPresent()) {
             try {
-                String comments = stashSession.getComments(PROJECT_KEY, REPO, currentPullRequest.get().getId().toString(), path);
+                String comments = stashRestSession.getComments(PROJECT_KEY, REPO, currentPullRequest.get().getId().toString(), path);
                 List<Comment> allComments = Lists.transform(getValues(comments), new Function<String, Comment>() {
                     public Comment apply(String s) {
                         return gson.fromJson(s, CommentBean.class);
@@ -84,7 +93,7 @@ public class StashServerFacadeImpl implements StashServerFacade
     public void addComment(Comment comment) {
         if (currentPullRequest.isPresent()) {
             try {
-                stashSession.postComment(PROJECT_KEY, REPO, currentPullRequest.get().getId().toString(), comment);
+                stashRestSession.postComment(PROJECT_KEY, REPO, currentPullRequest.get().getId().toString(), comment);
             } catch (IOException e) {
                 e.printStackTrace();
             }
