@@ -1,5 +1,6 @@
 package com.atlassian.theplugin.idea.stash;
 
+import com.atlassian.connector.intellij.stash.Change;
 import com.intellij.ide.DataManager;
 import com.intellij.openapi.actionSystem.DataConstants;
 import com.intellij.openapi.actionSystem.DataContext;
@@ -29,7 +30,7 @@ public class StashChangedFilesPanel extends JPanel {
         this.add(tree);
         this.add(new JLabel("Changed files"), BorderLayout.NORTH);
 
-        changeContents(Collections.<String>emptyList());
+        changeContents(Collections.<Change>emptyList());
 
         tree.addTreeSelectionListener(new TreeSelectionListener() {
             public void valueChanged(TreeSelectionEvent e) {
@@ -52,28 +53,37 @@ public class StashChangedFilesPanel extends JPanel {
 
         tree.setCellRenderer(new TreeCellRenderer() {
             public Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
-                Object userObject = ((DefaultMutableTreeNode)value).getUserObject();
+                Object userObject = ((DefaultMutableTreeNode) value).getUserObject();
 
                 JLabel label = new JLabel();
-                label.setText(userObject.toString());
+
+                if (userObject instanceof Change)
+                {
+                    Change change = (Change) userObject;
+                    label.setText(change.getFilePath());
+
+                    String changeType = change.getChangeType();
+                    if (changeType.equals("ADD")) {
+                        label.setForeground(Color.GREEN);
+                    } else if(changeType.equals("MODIFY"))
+                        label.setForeground(Color.BLUE);
+                }
 
                 return label;
             }
         });
     }
 
-    public void changeContents(List<String> paths)
+    public void changeContents(List<Change> changes)
     {
         DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("");
 
         tree.expandRow(0);
         tree.setRootVisible(false);
 
-        for (String path : paths) {
-            DefaultMutableTreeNode node = new DefaultMutableTreeNode(path);
-
-
-            rootNode.add(node);
+        for (Change change : changes) {
+            DefaultMutableTreeNode newChild = new DefaultMutableTreeNode(change);
+            rootNode.add(newChild);
         }
 
         tree.setModel(new DefaultTreeModel(rootNode));
